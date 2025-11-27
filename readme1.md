@@ -296,3 +296,41 @@ if not re.search(r'[\u4e00-\u9fff]', content):
 3. **运行测试**：运行 `4.2_memory_clonebot.py`，选择"宋曙延"角色
 4. **效果验证**：观察机器人是否模仿了宋曙延的说话风格
 
+
+4.3前端网页转化
+# Streamlit前端核心代码
+import streamlit as st
+关键知识点整理：
+
+页面配置：使用st.set_page_config()设置标题、图标和布局
+
+会话状态：使用st.session_state管理对话历史和状态
+
+布局组件：
+
+st.title()- 主标题
+
+st.sidebar- 侧边栏容器
+
+st.markdown()- 支持Markdown格式
+
+交互组件：
+
+st.selectbox()- 下拉选择框
+
+st.button()- 按钮
+
+st.chat_input()- 聊天输入框
+
+消息显示：
+
+st.chat_message()- 聊天消息容器
+
+with语句块 - 组织相关UI元素
+
+状态反馈：
+
+st.spinner()- 加载指示器
+
+st.error()- 错误提示
+
