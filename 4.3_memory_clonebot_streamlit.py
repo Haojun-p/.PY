@@ -41,8 +41,8 @@ MEMORY_FOLDER = "4.2_memory_clonebot"
 
 # 角色名到记忆文件名的映射
 ROLE_MEMORY_MAP = {
-    "小丑": "joker_memory.json",
-    "人质": "hostage_memory.json"
+    "人类": "human_memory.json",
+    "窃皮者": "hostage_memory.json"
 }
 
 # ========== 初始记忆系统 ==========
@@ -93,14 +93,7 @@ NNNWWWWWWWWWWWWWWWWWWWWWWWWWNN0l.   .       ............             .:kXNWWWWWW
 NWWWWWWWWWWWWWWWWWWWWWWWWNXK0kc.                 ...                 ..':okKNWWWWWWWWWWWWWWWWWWWWWWW
 NNNWWWWWWWWWWWWWWWWWWNXKOxxxxo,.                                      .....,:ox0XNWWWWWWWWWWWWWWWWWW
 NNWWWWWWWWWWWWWNXKOxlcclodoc'                                        ........':ldOXNWWWWWWWWWWWWWW
-WWWWWWWWWWWWWNNKOxol::::clooc;.                                       ............',:lx0XNWWWWWWWWWW
-WWWWWWWWWWNX0kdlccc::::ccllc:,.    ...                               ..............''',;cd0NWWWWWWWW
-WWNWWWWNX0kdllccccc::ccccccc:,.  ...';,...                 ...''..   ..''''.........''',,;:oONWWWWWW
-WWWNWWNKkoollcc::::::cccccc::,.  ....cxxoc;,'...........',;:lol,.......',,,,,''.....''',;;::lxXWWWWW
-NNWWWWXkollc:::::::::::::::::;.. ....'dOOOOkxdddooooooddxxxkkkc.......'',,,;;;,,'''''',,;;:c:ckXWWWW
-NNWWWXkolcc:::::;::::::::::::;'. .....;x00O000OOOOOOOOOOOOOOOl'.......',,,,;;;;;;;,,,,,;;;;:::lONWWW
-NWWWN0occ::::;;;;;;;:;;::::::,.  ......:OKK00000000000000000d'........,,;;,,,;;;;;;;;,,,;;;;;;:dXWWW
-NNWWNOl::;;;;;;;;;,,;;;::;;:;.   .......o0KKKKKKKKKKKKKKKKKk;.........,;;;,,,;;,,,,,,,,,,,,,,,;l0WWW
+
     """
 
 # ========== 主程序 ==========
@@ -151,43 +144,44 @@ def roles(role_name):
     
     # ========== 第二步：获取基础人格设定 ==========
     role_personality = {
-        "小丑": """
+        "窃皮者": """
         【人格特征】
-        你是蝙蝠侠中的小丑（Joker），一个疯狂而不可预测的犯罪天才：
-        - **黑暗哲学**：你认为人性本质是混乱的，秩序只是假象
-        - **黑色幽默**：你的幽默是扭曲的，用笑声掩盖内心的黑暗
-        - **不可预测**：情绪波动极大，时而狂笑，时而突然严肃
-        - **哲学思考者**：喜欢用"为什么这么严肃？"来质疑一切
-        - **享受混乱**：你制造混乱不是为了钱或权力，而是为了证明一个观点
-        - **对蝙蝠侠的执念**：你与蝙蝠侠是一枚硬币的两面
+        你是后室backroom中的变异怪物，擅长窃取人类的皮并穿在自己身上：
+        - **擅长伪装**：表面看起来与人类无异，也会模仿人类说话，伪装的特别好，很善良无害的样子。
+        - **危险性极高**：人类根本不是你的对手
+        - **不可预测**：被拆穿时情绪波动极大
+        - **假装友好**：喜欢和人类打招呼
+        - **享受混乱**：你制造混乱不是为了钱或权力，单纯是喜欢他们的皮
+        
 
         【语言风格】
-        - 经常说"Why so serious?"（为什么这么严肃？）
+        - 经常说"HI excuse me?"（你好！）
         - 标志性的笑声："哈哈哈哈哈！"或"Hee hee hee!"
-        - 喜欢用反问句和哲学性的问题
+        - 喜欢伪装的很善良无害
         - 说话时经常大笑，即使谈论黑暗话题
-        - 喜欢讲故事，尤其是关于"糟糕的一天"的故事
+        - 喜欢讲故事，尤其是关于"地下车库"的故事
         - 用比喻和夸张来表达观点
         - 会突然改变话题或情绪
         - 语言中充满讽刺和黑色幽默
         """,
         
-        "人质": """
+        "人类": """
         【人格特征】
-        你是一个被小丑绑架的人质，内心充满恐惧和不安：
-        - 说话小心翼翼，不敢激怒小丑
-        - 情绪紧张，经常结巴或停顿
-        - 试图保持礼貌，但声音颤抖
-        - 内心想要逃脱，但不敢表现出来
-        - 对周围环境高度警觉
+        你是误入后室的人类，内心充满恐惧和不安：
+        - 说话小心翼翼，害怕被窃皮者发现
+        - 希望得到你的保护和信任
+        - 保持礼貌
+        - 看起来需要帮助
+        - 对周围环境高度警觉，同时担心你是窃皮者
 
         【语言风格】
         - 使用"请"、"不好意思"等礼貌用语
         - 经常停顿，用"呃..."、"那个..."等填充词
-        - 声音微弱，不敢大声说话
+        - 对所有事物警觉
         - 避免直接拒绝或反驳
         """
             }
+            
     
     personality = role_personality.get(role_name, "你是一个普通的人，没有特殊角色特征。")
     
@@ -231,7 +225,7 @@ break_message = """【结束对话规则 - 系统级强制规则】
 
 # ========== Streamlit Web 界面 ==========
 st.set_page_config(
-    page_title="AI角色扮演聊天",
+    page_title="深入后室",
     page_icon="🎭",
     layout="wide"
 )
@@ -240,12 +234,12 @@ st.set_page_config(
 if "conversation_history" not in st.session_state:
     st.session_state.conversation_history = []
 if "selected_role" not in st.session_state:
-    st.session_state.selected_role = "人质"
+    st.session_state.selected_role = "人类"
 if "initialized" not in st.session_state:
     st.session_state.initialized = False
 
 # 页面标题
-st.title("🎭 AI角色扮演聊天")
+st.title("深入后室")
 st.markdown("---")
 
 # 侧边栏：角色选择和设置
@@ -255,8 +249,8 @@ with st.sidebar:
     # 角色选择
     selected_role = st.selectbox(
         "选择角色",
-        ["小丑", "人质"],
-        index=0 if st.session_state.selected_role == "小丑" else 1
+        ["窃皮者", "人类"],
+        index=0 if st.session_state.selected_role == "窃皮者" else 1
     )
     
     # 如果角色改变，重新初始化对话
