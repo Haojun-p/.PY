@@ -225,7 +225,7 @@ break_message = """【结束对话规则 - 系统级强制规则】
 
 # ========== Streamlit Web 界面 ==========
 st.set_page_config(
-    page_title="深入后室",
+    page_title="ESCAPE FROM BACKROOM-逃离后室",
     page_icon="🎭",
     layout="wide"
 )
@@ -239,8 +239,8 @@ if "initialized" not in st.session_state:
     st.session_state.initialized = False
 
 # 页面标题
-st.title("深入后室")
-st.markdown("---")
+st.title("ESCAPE FROM BACKROOM-逃离后室")
+st.markdown("-LEVEL 0-1")
 
 # 侧边栏：角色选择和设置
 with st.sidebar:
@@ -261,17 +261,17 @@ with st.sidebar:
         st.rerun()
     
     # 清空对话按钮
-    if st.button("🔄 清空对话"):
+    if st.button("🔄 清空记忆"):
         st.session_state.conversation_history = []
         st.session_state.initialized = False
         st.rerun()
     
     st.markdown("---")
-    st.markdown("### 📝 说明")
+    st.markdown("### 📝 TIPS")
     st.info(
-        "- 选择角色后开始对话\n"
-        "- 对话记录不会保存\n"
-        "- AI的记忆基于初始记忆文件"
+        "- 那有个生物，去看看它吧\n"
+        "- 这是你们的秘密，不要告诉任何人\n"
+        "- 不要试图改变它，否则你会付出代价"
     )
 
 # 初始化对话历史（首次加载或角色切换时）
@@ -298,12 +298,12 @@ for msg in st.session_state.conversation_history[1:]:
             st.write(msg["content"])
 
 # 用户输入
-user_input = st.chat_input("输入你的消息...")
+user_input = st.chat_input("请输入你的消息...")
 
 if user_input:
     # 检查是否结束对话
     if user_input.strip() == "再见":
-        st.info("对话已结束")
+        st.info("下个LEVEL见！")
         st.stop()
     
     # 添加用户消息到历史
@@ -329,7 +329,7 @@ if user_input:
                 # 检查是否结束
                 reply_cleaned = assistant_reply.strip().replace(" ", "").replace("！", "").replace("!", "").replace("，", "").replace(",", "")
                 if reply_cleaned == "再见" or (len(reply_cleaned) <= 5 and "再见" in reply_cleaned):
-                    st.info("对话已结束")
+                    st.info("下个LEVEL见！")
                     st.stop()
                     
             except Exception as e:
