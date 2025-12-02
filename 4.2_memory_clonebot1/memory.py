@@ -82,3 +82,4 @@ def load_role_memory(role_name: str, max_examples: int = 100) -> str:
     print(f"✓ 已加载角色 '{role_name}' 的记忆: 使用 {len(numbered)} 条示例")
 
     return memory_text
+#

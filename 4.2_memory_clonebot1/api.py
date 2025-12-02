@@ -32,4 +32,4 @@ def call_zhipu_api(messages, model: str = "glm-4-flash"):
 
     if response.status_code == 200:
         return response.json()
-    raise Exception(f"API调用失败: {response.status_code}, {response.text}")
+    raise Exception(f"API调用失败: {response.status_code}, {response.text}") #

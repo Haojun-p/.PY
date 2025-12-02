@@ -4,7 +4,7 @@ from roles import get_role_prompt, get_break_rules
 
 def _ensure_system_initialized(history, role_name: str):
     """如果还没有 system 消息，则初始化角色设定和结束规则。"""
-    if history and history[0].get("role") == "system":
+    if history and history[0].get("role") == "system":#
         return
 
     role_prompt = get_role_prompt(role_name)
