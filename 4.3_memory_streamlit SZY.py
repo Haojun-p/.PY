@@ -41,8 +41,8 @@ MEMORY_FOLDER = "4.2_memory_clonebot"
 
 # 角色名到记忆文件名的映射
 ROLE_MEMORY_MAP = {
-    "宋曙延": "human_memory.json",
-    "吴杰": "hostage_memory.json"
+    "宋曙延": "SONG_train.json",
+    "吴杰": "SONG_dev.json"
 }
 
 # ========== 初始记忆系统 ==========
