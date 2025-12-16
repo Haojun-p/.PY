@@ -1,10 +1,24 @@
 import streamlit as st
 import time
-from game import (
-    MAPS, COMPONENTS, GameState, npc_advice, simulate_cross,
-    build_world_map, build_river_scene, draw_person_with_kite,
-    draw_component_icon, draw_splash, EXPERTS
-)
+import importlib.util
+import os
+
+game_path = os.path.join(os.path.dirname(__file__), "game.py")
+spec = importlib.util.spec_from_file_location("game", game_path)
+game = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(game)
+
+MAPS = game.MAPS
+COMPONENTS = game.COMPONENTS
+GameState = game.GameState
+npc_advice = game.npc_advice
+simulate_cross = game.simulate_cross
+build_world_map = game.build_world_map
+build_river_scene = game.build_river_scene
+draw_person_with_kite = game.draw_person_with_kite
+draw_component_icon = game.draw_component_icon
+draw_splash = game.draw_splash
+EXPERTS = game.EXPERTS
 
 
 def init_state():
