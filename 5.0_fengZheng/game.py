@@ -120,22 +120,55 @@ def build_world_map():
         np = __import__("numpy")
     except ImportError:
         return None
-    w, h = 800, 500
+    w, h = 1000, 600
     arr = np.zeros((h, w, 3), dtype=np.uint8)
-    arr[:] = (20, 60, 120)
+    arr[:] = (30, 70, 130)
+    
+    def draw_continent(x0, y0, width, height, color=(40, 100, 40)):
+        for y in range(max(0, y0), min(h, y0 + height)):
+            for x in range(max(0, x0), min(w, x0 + width)):
+                if (x - x0) * (x - x0) + (y - y0) * (y - y0) < width * height * 0.3:
+                    arr[y, x] = color
+    
+    def draw_mountain_range(x0, y0, length):
+        for i in range(length):
+            x = x0 + i
+            if 0 <= x < w:
+                peak = y0 - abs(i - length // 2) // 3
+                if 0 <= peak < h:
+                    arr[peak, x] = (120, 120, 120)
+                    if peak + 1 < h:
+                        arr[peak + 1, x] = (100, 100, 100)
+    
+    draw_continent(100, 100, 200, 150, (45, 110, 45))
+    draw_continent(400, 80, 250, 180, (50, 120, 50))
+    draw_continent(750, 120, 180, 140, (40, 100, 40))
+    draw_continent(150, 350, 180, 120, (42, 105, 42))
+    draw_continent(450, 380, 220, 100, (48, 115, 48))
+    draw_continent(200, 500, 300, 80, (45, 110, 45))
+    
+    draw_mountain_range(250, 150, 80)
+    draw_mountain_range(550, 120, 100)
+    draw_mountain_range(300, 400, 90)
+    
     for y in range(h):
         for x in range(w):
-            if 50 < y < h - 50 and 50 < x < w - 50:
-                arr[y, x] = (34, 90, 34)
-            if (x + y) % 40 < 2:
+            if (x + y) % 50 < 1:
                 arr[y, x] = (200, 200, 180)
+            if (x * 3 + y * 2) % 120 < 2:
+                arr[y, x] = (60, 140, 60)
+    
     for key, data in MAPS.items():
         px, py = int(data["pos"][0] * w), int(data["pos"][1] * h)
-        for dy in range(-8, 9):
-            for dx in range(-8, 9):
+        for dy in range(-10, 11):
+            for dx in range(-10, 11):
                 if 0 <= px + dx < w and 0 <= py + dy < h:
-                    if dx * dx + dy * dy < 64:
-                        arr[py + dy, px + dx] = (180, 60, 60)
+                    dist = dx * dx + dy * dy
+                    if dist < 100:
+                        arr[py + dy, px + dx] = (255, 50, 50)
+                    elif dist < 150:
+                        arr[py + dy, px + dx] = (255, 150, 150)
+    
     return arr
 
 
@@ -147,19 +180,73 @@ def build_river_scene(key: str, width: int = 600, height: int = 300):
     env = MAPS[key]
     seed = int(env["wind"] * 13 + env["flow"] * 7)
     arr = np.zeros((height, width, 3), dtype=np.uint8)
-    arr[:] = (135, 206, 235)
+    
+    sky_color = (135, 206, 250) if env["weather"] == "晴朗" else (120, 180, 220) if env["weather"] == "多云" else (100, 150, 200)
+    arr[:] = sky_color
+    
     sky_h = height // 3
-    arr[:sky_h, :] = (135, 206, 250)
+    for y in range(sky_h):
+        for x in range(width):
+            if env["weather"] == "雨" and (x + y + seed) % 8 < 2:
+                arr[y, x] = (180, 180, 200)
+            elif env["weather"] == "多云" and (x * 2 + y + seed) % 60 < 15:
+                arr[y, x] = (200, 200, 220)
+    
+    river_y = int(height * 0.55)
+    river_width_base = 50
+    
     for y in range(sky_h, height):
         for x in range(width):
-            if abs(y - height * 0.6) < 30 + (x % 40) * 0.3:
-                arr[y, x] = (24, 80, 180)
-            elif y > height * 0.7:
-                arr[y, x] = (34, 90, 34)
-    for x in range(0, width, 3):
-        wave_y = int(height * 0.6 + (x * 0.1 + seed) % 8 - 4)
-        if 0 <= wave_y < height:
-            arr[wave_y, x] = (200, 220, 255)
+            river_center_y = river_y + int((x % 80 - 40) * 0.2)
+            river_w = river_width_base + int((x % 60) * 0.5) + int(env["flow"] * 3)
+            if abs(y - river_center_y) < river_w:
+                depth = abs(y - river_center_y) / river_w
+                if depth < 0.3:
+                    arr[y, x] = (30, 100, 200)
+                elif depth < 0.6:
+                    arr[y, x] = (40, 110, 210)
+                else:
+                    arr[y, x] = (50, 120, 220)
+            elif y > height * 0.75:
+                grass_pattern = (x // 8 + y // 8 + seed) % 4
+                if grass_pattern == 0:
+                    arr[y, x] = (40, 100, 40)
+                elif grass_pattern == 1:
+                    arr[y, x] = (45, 110, 45)
+                else:
+                    arr[y, x] = (35, 95, 35)
+    
+    for x in range(0, width, 2):
+        wave_offset = int((x * 0.15 + seed * 0.5) % 12 - 6)
+        wave_y = river_y + wave_offset
+        if sky_h <= wave_y < height:
+            arr[wave_y, x] = (200, 230, 255)
+            if wave_y + 1 < height:
+                arr[wave_y + 1, x] = (180, 220, 250)
+    
+    def draw_tree(x, y, size=8):
+        for dy in range(size):
+            if 0 <= y + dy < height and 0 <= x < width:
+                arr[y + dy, x] = (101, 67, 33)
+        for ty in range(-size//2, 0):
+            for tx in range(-size//2, size//2):
+                if 0 <= y + ty < height and 0 <= x + tx < width:
+                    if abs(tx) + abs(ty) < size//2:
+                        arr[y + ty, x + tx] = (34, 139, 34)
+    
+    def draw_rock(x, y):
+        for dy in range(3):
+            for dx in range(-2, 3):
+                if 0 <= y + dy < height and 0 <= x + dx < width:
+                    if abs(dx) + dy < 3:
+                        arr[y + dy, x + dx] = (120, 120, 120)
+    
+    if width > 400:
+        draw_tree(80, int(height * 0.7), 10)
+        draw_tree(width - 100, int(height * 0.72), 9)
+        draw_rock(150, int(height * 0.78))
+        draw_rock(width - 150, int(height * 0.76))
+    
     return arr
 
 
@@ -169,22 +256,43 @@ def draw_person_with_kite(arr, x: int, y: int, kite_x: int, kite_y: int, has_kit
     except ImportError:
         return
     h, w, _ = arr.shape
+    
     if 0 <= y < h and 0 <= x < w:
+        if 0 <= y - 1 < h:
+            arr[y - 1, x] = (255, 220, 177)
         arr[y, x] = (139, 69, 19)
         if 0 <= y + 1 < h:
-            arr[y + 1, x] = (255, 220, 177)
+            arr[y + 1, x] = (50, 50, 50)
+        if 0 <= x - 1 < w and 0 <= y < h:
+            arr[y, x - 1] = (200, 150, 100)
+        if 0 <= x + 1 < w and 0 <= y < h:
+            arr[y, x + 1] = (200, 150, 100)
         if 0 <= y + 2 < h:
             arr[y + 2, x] = (50, 50, 50)
+    
     if has_kite and 0 <= kite_y < h and 0 <= kite_x < w:
-        for dy in range(-3, 4):
-            for dx in range(-3, 4):
+        kite_size = 6
+        for dy in range(-kite_size, kite_size + 1):
+            for dx in range(-kite_size, kite_size + 1):
                 if 0 <= kite_y + dy < h and 0 <= kite_x + dx < w:
-                    if abs(dx) + abs(dy) < 4:
-                        arr[kite_y + dy, kite_x + dx] = (255, 100, 100)
-        if abs(kite_x - x) + abs(kite_y - y) > 5:
-            mid_x, mid_y = (x + kite_x) // 2, (y + kite_y) // 2
-            if 0 <= mid_y < h and 0 <= mid_x < w:
-                arr[mid_y, mid_x] = (200, 200, 200)
+                    dist = abs(dx) + abs(dy)
+                    if dist < kite_size:
+                        if dist < kite_size // 2:
+                            arr[kite_y + dy, kite_x + dx] = (255, 80, 80)
+                        else:
+                            arr[kite_y + dy, kite_x + dx] = (255, 120, 120)
+        if 0 <= kite_y - kite_size - 1 < h and 0 <= kite_x < w:
+            arr[kite_y - kite_size - 1, kite_x] = (255, 200, 200)
+        
+        if abs(kite_x - x) + abs(kite_y - y) > 8:
+            steps = max(abs(kite_x - x), abs(kite_y - y))
+            for i in range(1, steps, max(1, steps // 10)):
+                mid_x = x + (kite_x - x) * i // steps
+                mid_y = y + (kite_y - y) * i // steps
+                if 0 <= mid_y < h and 0 <= mid_x < w:
+                    arr[mid_y, mid_x] = (220, 220, 220)
+                    if 0 <= mid_y - 1 < h:
+                        arr[mid_y - 1, mid_x] = (200, 200, 200)
 
 
 def draw_component_icon(name: str, size: int = 32):
