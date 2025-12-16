@@ -7,6 +7,10 @@ def init_state():
         st.session_state.state = GameState()
     if "pos" not in st.session_state:
         st.session_state.pos = [0, 0]
+    if "screen" not in st.session_state:
+        st.session_state.screen = "menu"
+    if "result" not in st.session_state:
+        st.session_state.result = None
 
 
 def money_row():
@@ -49,8 +53,8 @@ def shop_and_assemble():
                     st.warning("资金不足")
     with cols[1]:
         st.text("背包")
-        for item in list(state.inventory):
-            if st.button(f"装配/卸下 {item}", key=f"asm-{item}"):
+        for idx, item in enumerate(list(state.inventory)):
+            if st.button(f"装配/卸下 {item}", key=f"asm-{idx}-{item}"):
                 state.assemble(item)
         st.text(f"已组装: {', '.join(state.assembled) or '无'}")
 
@@ -96,25 +100,47 @@ def expert_zone():
 def run_trial():
     state = st.session_state.state
     if st.button("起飞渡河"):
-        result = simulate_cross(state)
+        st.session_state.result = simulate_cross(state)
+    if st.session_state.result:
+        result = st.session_state.result
         if result["success"]:
             st.balloons()
             st.success(f"成功! 得分{result['score']} 获得赏金{result['bounty']}￥ 星星{result['stars']}颗")
         else:
             st.error(f"失败，得分{result['score']}，落水动画：💧💦💦💦")
         st.json(result)
+        if st.button("回主菜单"):
+            st.session_state.clear()
+            init_state()
 
 
 def main():
     st.set_page_config(page_title="风筝渡河", page_icon="🪁", layout="wide")
-    st.title("风筝渡河 · 横板像素模拟")
     init_state()
-    money_row()
-    map_picker()
-    shop_and_assemble()
-    controls()
-    expert_zone()
-    run_trial()
+    screen = st.session_state.screen
+
+    if screen == "menu":
+        st.title("🪁 风筝渡河")
+        st.markdown("`像素风` · 挑战各大河流")
+        st.markdown("▇▆▅▄▃▂▁ 河流彼岸在召唤 ▁▂▃▄▅▆▇")
+        if st.button("开始游戏"):
+            st.session_state.screen = "map"
+    elif screen == "map":
+        st.header("选择地图")
+        map_picker()
+        if st.button("进入装备与准备"):
+            st.session_state.screen = "build"
+    elif screen == "build":
+        st.header("装备准备 · 像素工坊")
+        money_row()
+        map_picker()
+        shop_and_assemble()
+        controls()
+        expert_zone()
+        run_trial()
+    else:
+        st.session_state.screen = "menu"
+        st.experimental_rerun()
 
 
 if __name__ == "__main__":
