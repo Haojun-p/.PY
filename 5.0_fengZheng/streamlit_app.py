@@ -1,148 +1,204 @@
 import streamlit as st
-from game import MAPS, COMPONENTS, GameState, npc_advice, simulate_cross, build_map_image, EXPERTS
+import time
+from game import (
+    MAPS, COMPONENTS, GameState, npc_advice, simulate_cross,
+    build_world_map, build_river_scene, draw_person_with_kite,
+    draw_component_icon, draw_splash, EXPERTS
+)
 
 
 def init_state():
     if "state" not in st.session_state:
         st.session_state.state = GameState()
-    if "pos" not in st.session_state:
-        st.session_state.pos = [0, 0]
     if "screen" not in st.session_state:
         st.session_state.screen = "menu"
+    if "game_running" not in st.session_state:
+        st.session_state.game_running = False
+    if "kite_pos" not in st.session_state:
+        st.session_state.kite_pos = [300, 100]
+    if "person_pos" not in st.session_state:
+        st.session_state.person_pos = [50, 250]
+    if "splash_frame" not in st.session_state:
+        st.session_state.splash_frame = -1
     if "result" not in st.session_state:
         st.session_state.result = None
 
 
-def money_row():
-    st.subheader("资金与状态")
-    st.metric("资金(￥)", st.session_state.state.money)
-    cols = st.columns(len(EXPERTS))
-    for i, name in enumerate(EXPERTS):
-        cols[i].progress(st.session_state.state.npc_mood[name] / 100, text=f"{name}心情")
-    st.caption(f"已咨询 {st.session_state.state.chats}/3 次")
+def menu_screen():
+    st.markdown("<br><br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 2, 1])
+    with col2:
+        st.markdown("<h1 style='text-align: center; font-size: 4em;'>🪁</h1>", unsafe_allow_html=True)
+        st.markdown("<h1 style='text-align: center; font-size: 3em;'>风筝渡河</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-size: 1.5em; color: #666;'>像素风 · 挑战各大河流</p>", unsafe_allow_html=True)
+        st.markdown("<br><br>", unsafe_allow_html=True)
+        if st.button("开始游戏", use_container_width=True, type="primary"):
+            st.session_state.screen = "map"
+            st.rerun()
 
 
-def map_picker():
+def map_screen():
+    st.title("🌍 选择河流")
+    world_img = build_world_map()
+    if world_img is not None:
+        st.image(world_img, use_container_width=True)
+    st.markdown("---")
+    cols = st.columns(4)
+    for idx, (key, data) in enumerate(MAPS.items()):
+        with cols[idx % 4]:
+            if st.button(f"📍 {key}", key=f"map-{key}", use_container_width=True):
+                st.session_state.state.map_key = key
+                st.session_state.screen = "game"
+                st.rerun()
+            st.caption(f"风速:{data['wind']}m/s 水流:{data['flow']}")
+
+
+def game_screen():
     state = st.session_state.state
-    st.subheader("地图选择")
-    key = st.selectbox("选择河流", list(MAPS.keys()), index=list(MAPS.keys()).index(state.map_key))
-    state.map_key = key
-    env = MAPS[key]
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("天气", env["weather"])
-    c2.metric("湿度", env["humidity"])
-    c3.metric("风速", f"{env['wind']} m/s")
-    c4.metric("水流", env["flow"])
-    img = build_map_image(key)
-    if img is not None:
-        st.image(img, caption=f"{key} 像素河流")
-
-
-def shop_and_assemble():
-    state = st.session_state.state
-    st.subheader("商店与组装")
-    cols = st.columns(2)
-    with cols[0]:
+    env = MAPS[state.map_key]
+    
+    with st.sidebar:
+        st.header("💰 资金")
+        st.metric("", f"{state.money}￥")
+        st.markdown("---")
+        st.subheader("🛒 商店")
         for comp in COMPONENTS:
-            col_a, col_b, col_c = st.columns([2, 1, 1])
-            col_a.text(f"{comp['name']}  ￥{comp['price']}")
-            col_b.text(f"+面积{comp.get('area',0)} 稳定{comp.get('stability',0)} 控制{comp.get('control',0)} 高度{comp.get('height',0)}")
-            if col_c.button("购买", key=f"buy-{comp['name']}"):
-                ok = state.buy(comp["name"])
-                if not ok:
-                    st.warning("资金不足")
-    with cols[1]:
-        st.text("背包")
+            icon = draw_component_icon(comp["name"])
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if icon is not None:
+                    st.image(icon, width=40)
+            with col2:
+                st.text(f"{comp['name']}\n￥{comp['price']}")
+                if st.button("买", key=f"buy-{comp['name']}"):
+                    if state.buy(comp["name"]):
+                        st.success("购买成功")
+                    else:
+                        st.error("资金不足")
+        st.markdown("---")
+        st.subheader("🎒 背包")
         for idx, item in enumerate(list(state.inventory)):
-            if st.button(f"装配/卸下 {item}", key=f"asm-{idx}-{item}"):
-                state.assemble(item)
-        st.text(f"已组装: {', '.join(state.assembled) or '无'}")
-
-
-def controls():
-    st.subheader("飞行按键")
-    c1, c2, c3 = st.columns(3)
-    if c1.button("A 左"):
-        st.session_state.pos[0] -= 1
-    if c2.button("W 上"):
-        st.session_state.pos[1] += 1
-    if c3.button("D 右"):
-        st.session_state.pos[0] += 1
-    c4, c5, c6 = st.columns(3)
-    if c4.button("S 下"):
-        st.session_state.pos[1] -= 1
-    st.caption(f"当前位置(x,y): {tuple(st.session_state.pos)}")
-
-
-def expert_zone():
-    state = st.session_state.state
-    st.subheader("NPC 专家")
-    expert = st.selectbox("选择专家", EXPERTS)
-    question = st.text_input("你的问题", "帮我优化渡河方案")
-    col1, col2 = st.columns(2)
-    if col1.button("付费咨询 -20￥", disabled=state.chats >= 3):
-        ok = state.pay_for_chat(expert, True)
-        if ok:
-            tips, acc = npc_advice(state, expert, question)
-            st.success(f"{expert} (准确度{int(acc*100)}%): {' | '.join(tips)}")
-        else:
-            st.warning("咨询失败，检查次数或资金")
-    if col2.button("白嫖问", disabled=state.chats >= 3):
-        ok = state.pay_for_chat(expert, False)
-        if ok:
-            tips, acc = npc_advice(state, expert, question)
-            st.info(f"{expert} (准确度{int(acc*100)}%): {' | '.join(tips)}")
-        else:
-            st.warning("已达次数上限")
-    st.caption(f"记忆片段: {state.memory[expert][-2:]}")
-
-
-def run_trial():
-    state = st.session_state.state
-    if st.button("起飞渡河"):
-        st.session_state.result = simulate_cross(state)
-    if st.session_state.result:
-        result = st.session_state.result
-        if result["success"]:
-            st.balloons()
-            st.success(f"成功! 得分{result['score']} 获得赏金{result['bounty']}￥ 星星{result['stars']}颗")
-        else:
-            st.error(f"失败，得分{result['score']}，落水动画：💧💦💦💦")
-        st.json(result)
-        if st.button("回主菜单"):
+            icon = draw_component_icon(item)
+            col1, col2 = st.columns([1, 3])
+            with col1:
+                if icon is not None:
+                    st.image(icon, width=30)
+            with col2:
+                if st.button(f"装/卸 {item}", key=f"asm-{idx}-{item}"):
+                    state.assemble(item)
+        st.markdown("---")
+        st.subheader("👥 NPC专家")
+        expert = st.selectbox("选择", EXPERTS)
+        question = st.text_input("问题", "优化方案")
+        col1, col2 = st.columns(2)
+        if col1.button("付费-20￥", disabled=state.chats >= 3):
+            if state.pay_for_chat(expert, True):
+                tips, acc = npc_advice(state, expert, question)
+                st.success(f"{expert}({int(acc*100)}%): {tips[0]}")
+        if col2.button("白嫖", disabled=state.chats >= 3):
+            if state.pay_for_chat(expert, False):
+                tips, acc = npc_advice(state, expert, question)
+                st.info(f"{expert}({int(acc*100)}%): {tips[0]}")
+        st.caption(f"咨询: {state.chats}/3")
+        st.markdown("---")
+        if st.button("🏠 回主菜单"):
             st.session_state.clear()
             init_state()
+            st.session_state.screen = "menu"
+            st.rerun()
+    
+    st.title(f"🌊 {state.map_key} · 渡河挑战")
+    col1, col2, col3, col4 = st.columns(4)
+    col1.metric("天气", env["weather"])
+    col2.metric("风速", f"{env['wind']} m/s")
+    col3.metric("水流", env["flow"])
+    col4.metric("湿度", f"{env['humidity']*100:.0f}%")
+    
+    if not st.session_state.game_running:
+        assembled = ", ".join(state.assembled) if state.assembled else "无"
+        st.info(f"已组装: {assembled}")
+        if st.button("🚀 开始渡河", type="primary", use_container_width=True):
+            st.session_state.game_running = True
+            st.session_state.kite_pos = [300, 100]
+            st.session_state.person_pos = [50, 250]
+            st.session_state.splash_frame = -1
+            st.rerun()
+    else:
+        scene = build_river_scene(state.map_key, 600, 300)
+        if scene is not None:
+            has_kite = "碳纤维骨架" in state.assembled or "轻质面料" in state.assembled
+            draw_person_with_kite(
+                scene, st.session_state.person_pos[0], st.session_state.person_pos[1],
+                st.session_state.kite_pos[0], st.session_state.kite_pos[1], has_kite
+            )
+            if "高架" in state.assembled:
+                for y in range(200, 250):
+                    if 0 <= y < 300 and 0 <= 50 < 600:
+                        scene[y, 50] = (139, 69, 19)
+            if st.session_state.splash_frame >= 0:
+                draw_splash(scene, st.session_state.person_pos[0], st.session_state.person_pos[1], st.session_state.splash_frame)
+            st.image(scene, use_container_width=True)
+        
+        if st.session_state.result is None:
+            st.markdown("**控制风筝 (AWSD)**")
+            col1, col2, col3, col4 = st.columns(4)
+            moved = False
+            if col1.button("A 左"):
+                st.session_state.kite_pos[0] = max(0, st.session_state.kite_pos[0] - 10)
+                moved = True
+            if col2.button("W 上"):
+                st.session_state.kite_pos[1] = max(0, st.session_state.kite_pos[1] - 10)
+                moved = True
+            if col3.button("S 下"):
+                st.session_state.kite_pos[1] = min(300, st.session_state.kite_pos[1] + 10)
+                moved = True
+            if col4.button("D 右"):
+                st.session_state.kite_pos[0] = min(600, st.session_state.kite_pos[0] + 10)
+                moved = True
+            
+            if moved:
+                st.rerun()
+            
+            if st.button("✅ 完成渡河"):
+                result = simulate_cross(state)
+                st.session_state.result = result
+                if not result["success"]:
+                    st.session_state.splash_frame = 0
+                st.rerun()
+        else:
+            result = st.session_state.result
+            if result["success"]:
+                st.balloons()
+                st.success(f"🎉 成功! 得分:{result['score']} 赏金:{result['bounty']}￥ 星星:{'⭐' * result['stars']}")
+            else:
+                if st.session_state.splash_frame < 5:
+                    st.session_state.splash_frame += 1
+                    time.sleep(0.3)
+                    st.rerun()
+                st.error(f"❌ 失败! 得分:{result['score']} 落水了💧")
+            st.json(result)
+            if st.button("🔄 重新开始"):
+                st.session_state.game_running = False
+                st.session_state.result = None
+                st.session_state.splash_frame = -1
+                st.rerun()
 
 
 def main():
     st.set_page_config(page_title="风筝渡河", page_icon="🪁", layout="wide")
     init_state()
     screen = st.session_state.screen
-
+    
     if screen == "menu":
-        st.title("🪁 风筝渡河")
-        st.markdown("`像素风` · 挑战各大河流")
-        st.markdown("▇▆▅▄▃▂▁ 河流彼岸在召唤 ▁▂▃▄▅▆▇")
-        if st.button("开始游戏"):
-            st.session_state.screen = "map"
+        menu_screen()
     elif screen == "map":
-        st.header("选择地图")
-        map_picker()
-        if st.button("进入装备与准备"):
-            st.session_state.screen = "build"
-    elif screen == "build":
-        st.header("装备准备 · 像素工坊")
-        money_row()
-        map_picker()
-        shop_and_assemble()
-        controls()
-        expert_zone()
-        run_trial()
+        map_screen()
+    elif screen == "game":
+        game_screen()
     else:
         st.session_state.screen = "menu"
-        st.experimental_rerun()
+        st.rerun()
 
 
 if __name__ == "__main__":
     main()
-
