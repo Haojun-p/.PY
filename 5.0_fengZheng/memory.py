@@ -5,8 +5,9 @@ from typing import List
 
 # 角色名到记忆文件名的映射（使用当前文件夹内的两个 JSON 文件）
 ROLE_MEMORY_FILES = {
-    "宋曙延": "songshuyan_memory.json",
-    "吴杰": "wujie_memory.json",
+    "工程师": "engineer_memory.json",
+    "历史学家": "historian_memory.json",
+    "物理学家": "physicist_memory.json",
 }
 
 BASE_DIR = os.path.dirname(__file__)
