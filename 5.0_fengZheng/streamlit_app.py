@@ -30,7 +30,7 @@ def map_picker():
     c3.metric("风速", f"{env['wind']} m/s")
     c4.metric("水流", env["flow"])
     img = build_map_image(key)
-    if img:
+    if img is not None:
         st.image(img, caption=f"{key} 像素河流")
 
 
