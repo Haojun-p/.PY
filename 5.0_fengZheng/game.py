@@ -78,19 +78,73 @@ def _kite_stats(state: GameState):
 
 
 def npc_advice(state: GameState, expert: str, design: Dict):
+    try:
+        from chat import chat_once
+    except ImportError:
+        mood = state.npc_mood[expert]
+        env = MAPS[state.map_key]
+        accuracy = 1.0 if mood >= 70 else 0.75 if mood >= 40 else 0.5
+        tips = [
+            f"风速 {env['wind']}m/s，面积建议≥{8 + env['flow']*0.3:.1f}㎡",
+            "保持骨架和拉线稳固，结构词里尽量含'稳定'",
+            "湿度高时选轻质面料，控制要留尾翼或滑轮",
+            "起飞高度越高越稳，高架有帮助",
+        ]
+        if accuracy < 1:
+            tips = [t.replace("建议", "可能") for t in tips]
+        state.memory[expert].append(f"{design}|{tips[0]}")
+        return tips, accuracy
+    
     mood = state.npc_mood[expert]
     env = MAPS[state.map_key]
     accuracy = 1.0 if mood >= 70 else 0.75 if mood >= 40 else 0.5
-    tips = [
-        f"风速 {env['wind']}m/s，面积建议≥{8 + env['flow']*0.3:.1f}㎡",
-        "保持骨架和拉线稳固，结构词里尽量含“稳定”",
-        "湿度高时选轻质面料，控制要留尾翼或滑轮",
-        "起飞高度越高越稳，高架有帮助",
-    ]
-    if accuracy < 1:
-        tips = [t.replace("建议", "可能") for t in tips]
-    state.memory[expert].append(f"{design}|{tips[0]}")
-    return tips, accuracy
+    
+    if expert not in state.memory:
+        state.memory[expert] = []
+    
+    history = []
+    
+    context = f"""我正在设计一个能载重100公斤的风筝渡河系统，挑战{state.map_key}。
+
+【当前环境参数】
+- 天气：{env['weather']}
+- 风速：{env['wind']} m/s
+- 水流速度：{env['flow']}
+- 湿度：{env['humidity']*100:.0f}%
+
+【当前已组装组件】
+{', '.join(state.assembled) if state.assembled else '无'}
+
+【玩家问题】
+{design if isinstance(design, str) else '帮我优化渡河方案'}
+
+请根据你的专业背景，给出针对性的建议。"""
+    
+    if mood < 40:
+        context += "\n\n[注意：你当前心情不太好，回答可能不够详细]"
+    elif mood < 70:
+        context += "\n\n[注意：你当前心情一般，回答可以适当简化]"
+    
+    try:
+        reply = chat_once(history, context, role_name=expert)
+        state.memory[expert].append(f"{design}|{reply[:100]}")
+        
+        tips = [reply]
+        if len(reply) > 200:
+            sentences = reply.split('。')
+            tips = [s + '。' for s in sentences[:3] if s.strip()]
+        
+        return tips, accuracy
+    except Exception as e:
+        print(f"NPC建议生成失败: {e}")
+        fallback_tips = [
+            f"风速 {env['wind']}m/s，需要足够的升力",
+            "保持结构稳定很重要",
+            "根据环境选择合适的材料",
+        ]
+        if accuracy < 1:
+            fallback_tips = [t.replace("需要", "可能需要") for t in fallback_tips]
+        return fallback_tips, accuracy
 
 
 def simulate_cross(state: GameState):

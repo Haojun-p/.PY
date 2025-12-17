@@ -154,17 +154,19 @@ def game_screen():
         st.markdown("---")
         st.subheader("👥 NPC专家")
         expert = st.selectbox("选择", EXPERTS)
-        question = st.text_input("问题", "优化方案")
+        mood_icon = "😊" if state.npc_mood[expert] >= 70 else "😐" if state.npc_mood[expert] >= 40 else "😞"
+        st.caption(f"心情: {mood_icon} {state.npc_mood[expert]}/100")
+        question = st.text_input("问题", "帮我优化渡河方案")
         col1, col2 = st.columns(2)
         if col1.button("付费-20￥", disabled=state.chats >= 3):
             if state.pay_for_chat(expert, True):
                 tips, acc = npc_advice(state, expert, question)
-                st.success(f"{expert}({int(acc*100)}%): {tips[0]}")
+                st.success(f"**{expert}** (准确度{int(acc*100)}%):\n\n{tips[0]}")
         if col2.button("白嫖", disabled=state.chats >= 3):
             if state.pay_for_chat(expert, False):
                 tips, acc = npc_advice(state, expert, question)
-                st.info(f"{expert}({int(acc*100)}%): {tips[0]}")
-        st.caption(f"咨询: {state.chats}/3")
+                st.info(f"**{expert}** (准确度{int(acc*100)}%):\n\n{tips[0]}")
+        st.caption(f"咨询次数: {state.chats}/3")
         st.markdown("---")
         if st.button("🏠 回主菜单"):
             st.session_state.clear()
