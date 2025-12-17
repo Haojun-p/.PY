@@ -2,6 +2,7 @@ import streamlit as st
 import time
 import importlib.util
 import os
+from streamlit_keyup import streamlit_keyup
 
 game_path = os.path.join(os.path.dirname(__file__), "game.py")
 spec = importlib.util.spec_from_file_location("game", game_path)
@@ -20,6 +21,17 @@ draw_component_icon = game.draw_component_icon
 draw_splash = game.draw_splash
 EXPERTS = game.EXPERTS
 
+def get_kite_stats(state):
+    base = {"area": 6.0, "stability": 22, "control": 15, "weight": 10, "height": 0}
+    for name in state.assembled:
+        comp = next((c for c in COMPONENTS if c["name"] == name), None)
+        if not comp:
+            continue
+        for k in ["area", "stability", "control", "height", "weight"]:
+            base[k] += comp.get(k, 0)
+    base["lift"] = base["area"] * 1.4 - base["weight"]
+    return base
+
 
 def init_state():
     if "state" not in st.session_state:
@@ -36,17 +48,44 @@ def init_state():
         st.session_state.splash_frame = -1
     if "result" not in st.session_state:
         st.session_state.result = None
+    if "move_speed" not in st.session_state:
+        st.session_state.move_speed = 15
+    if "last_key" not in st.session_state:
+        st.session_state.last_key = None
 
 
 def menu_screen():
+    st.markdown("""
+    <style>
+    .main-title {
+        text-align: center;
+        font-size: 4.5em;
+        margin: 0.3em 0;
+        text-shadow: 3px 3px 6px rgba(0,0,0,0.3);
+    }
+    .sub-title {
+        text-align: center;
+        font-size: 2em;
+        color: #444;
+        margin: 0.5em 0;
+    }
+    .desc {
+        text-align: center;
+        font-size: 1.3em;
+        color: #666;
+        margin: 1em 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
+    
     st.markdown("<br><br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 2, 1])
+    col1, col2, col3 = st.columns([1, 2.5, 1])
     with col2:
-        st.markdown("<h1 style='text-align: center; font-size: 4em;'>🪁</h1>", unsafe_allow_html=True)
-        st.markdown("<h1 style='text-align: center; font-size: 3em;'>风筝渡河</h1>", unsafe_allow_html=True)
-        st.markdown("<p style='text-align: center; font-size: 1.5em; color: #666;'>像素风 · 挑战各大河流</p>", unsafe_allow_html=True)
+        st.markdown("<div class='main-title'>🪁</div>", unsafe_allow_html=True)
+        st.markdown("<div class='sub-title'>风筝渡河</div>", unsafe_allow_html=True)
+        st.markdown("<div class='desc'>像素风 · 挑战各大河流</div>", unsafe_allow_html=True)
         st.markdown("<br><br>", unsafe_allow_html=True)
-        if st.button("开始游戏", use_container_width=True, type="primary"):
+        if st.button("🚀 开始游戏", use_container_width=True, type="primary"):
             st.session_state.screen = "map"
             st.rerun()
 
@@ -56,15 +95,22 @@ def map_screen():
     world_img = build_world_map()
     if world_img is not None:
         st.image(world_img, use_container_width=True)
+    
     st.markdown("---")
+    st.subheader("📍 点击选择挑战的河流")
+    
     cols = st.columns(4)
     for idx, (key, data) in enumerate(MAPS.items()):
         with cols[idx % 4]:
-            if st.button(f"📍 {key}", key=f"map-{key}", use_container_width=True):
-                st.session_state.state.map_key = key
-                st.session_state.screen = "game"
-                st.rerun()
-            st.caption(f"风速:{data['wind']}m/s 水流:{data['flow']}")
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                if st.button(f"📍 {key}", key=f"map-{key}", use_container_width=True):
+                    st.session_state.state.map_key = key
+                    st.session_state.screen = "game"
+                    st.rerun()
+            with col_b:
+                st.caption(f"💰{data['bounty'][0]}-{data['bounty'][1]}￥")
+            st.caption(f"🌬️{data['wind']}m/s | 💧{data['flow']} | ☁️{data['weather']}")
 
 
 def game_screen():
@@ -122,6 +168,7 @@ def game_screen():
             st.rerun()
     
     st.title(f"🌊 {state.map_key} · 渡河挑战")
+    
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("天气", env["weather"])
     col2.metric("风速", f"{env['wind']} m/s")
@@ -129,8 +176,15 @@ def game_screen():
     col4.metric("湿度", f"{env['humidity']*100:.0f}%")
     
     if not st.session_state.game_running:
+        stats = get_kite_stats(state)
         assembled = ", ".join(state.assembled) if state.assembled else "无"
-        st.info(f"已组装: {assembled}")
+        
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.info(f"**已组装组件**: {assembled}")
+        with col_b:
+            st.info(f"**性能预览**: 升力{stats['lift']:.1f} | 稳定{stats['stability']:.0f} | 控制{stats['control']:.0f}")
+        
         if st.button("🚀 开始渡河", type="primary", use_container_width=True):
             st.session_state.game_running = True
             st.session_state.kite_pos = [300, 100]
@@ -138,7 +192,7 @@ def game_screen():
             st.session_state.splash_frame = -1
             st.rerun()
     else:
-        scene = build_river_scene(state.map_key, 600, 300)
+        scene = build_river_scene(state.map_key, 900, 450)
         if scene is not None:
             has_kite = "碳纤维骨架" in state.assembled or "轻质面料" in state.assembled
             draw_person_with_kite(
@@ -146,34 +200,66 @@ def game_screen():
                 st.session_state.kite_pos[0], st.session_state.kite_pos[1], has_kite
             )
             if "高架" in state.assembled:
-                for y in range(200, 250):
-                    if 0 <= y < 300 and 0 <= 50 < 600:
+                for y in range(300, 380):
+                    if 0 <= y < 450 and 0 <= 50 < 900:
                         scene[y, 50] = (139, 69, 19)
+                        if 0 <= 50 + 1 < 900:
+                            scene[y, 50 + 1] = (101, 50, 15)
             if st.session_state.splash_frame >= 0:
                 draw_splash(scene, st.session_state.person_pos[0], st.session_state.person_pos[1], st.session_state.splash_frame)
+            
             st.image(scene, use_container_width=True)
         
         if st.session_state.result is None:
-            st.markdown("**控制风筝 (AWSD)**")
-            col1, col2, col3, col4 = st.columns(4)
+            stats = get_kite_stats(state)
+            progress = min(100, int((st.session_state.kite_pos[0] / 900) * 100))
+            
+            col_info1, col_info2, col_info3 = st.columns(3)
+            with col_info1:
+                st.metric("渡河进度", f"{progress}%")
+            with col_info2:
+                st.metric("当前位置", f"({st.session_state.kite_pos[0]}, {st.session_state.kite_pos[1]})")
+            with col_info3:
+                st.metric("升力", f"{stats['lift']:.1f}")
+            
+            st.markdown("**控制风筝 (键盘 AWSD 或点击按钮)**")
+            
+            key_pressed = streamlit_keyup(key="game_control", debounce=50)
             moved = False
-            if col1.button("A 左"):
-                st.session_state.kite_pos[0] = max(0, st.session_state.kite_pos[0] - 10)
+            
+            if key_pressed:
+                key = key_pressed.lower()
+            if key == 'a':
+                st.session_state.kite_pos[0] = max(0, st.session_state.kite_pos[0] - st.session_state.move_speed)
                 moved = True
-            if col2.button("W 上"):
-                st.session_state.kite_pos[1] = max(0, st.session_state.kite_pos[1] - 10)
+            elif key == 'w':
+                st.session_state.kite_pos[1] = max(0, st.session_state.kite_pos[1] - st.session_state.move_speed)
                 moved = True
-            if col3.button("S 下"):
-                st.session_state.kite_pos[1] = min(300, st.session_state.kite_pos[1] + 10)
+            elif key == 's':
+                st.session_state.kite_pos[1] = min(450, st.session_state.kite_pos[1] + st.session_state.move_speed)
                 moved = True
-            if col4.button("D 右"):
-                st.session_state.kite_pos[0] = min(600, st.session_state.kite_pos[0] + 10)
+            elif key == 'd':
+                st.session_state.kite_pos[0] = min(900, st.session_state.kite_pos[0] + st.session_state.move_speed)
+                moved = True
+            
+            col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
+            if col1.button("⬅ A", use_container_width=True):
+                st.session_state.kite_pos[0] = max(0, st.session_state.kite_pos[0] - st.session_state.move_speed)
+                moved = True
+            if col2.button("⬆ W", use_container_width=True):
+                st.session_state.kite_pos[1] = max(0, st.session_state.kite_pos[1] - st.session_state.move_speed)
+                moved = True
+            if col3.button("⬇ S", use_container_width=True):
+                st.session_state.kite_pos[1] = min(450, st.session_state.kite_pos[1] + st.session_state.move_speed)
+                moved = True
+            if col4.button("➡ D", use_container_width=True):
+                st.session_state.kite_pos[0] = min(900, st.session_state.kite_pos[0] + st.session_state.move_speed)
                 moved = True
             
             if moved:
                 st.rerun()
             
-            if st.button("✅ 完成渡河"):
+            if col5.button("✅ 完成渡河", use_container_width=True, type="primary"):
                 result = simulate_cross(state)
                 st.session_state.result = result
                 if not result["success"]:
@@ -185,9 +271,9 @@ def game_screen():
                 st.balloons()
                 st.success(f"🎉 成功! 得分:{result['score']} 赏金:{result['bounty']}￥ 星星:{'⭐' * result['stars']}")
             else:
-                if st.session_state.splash_frame < 5:
+                if st.session_state.splash_frame < 8:
                     st.session_state.splash_frame += 1
-                    time.sleep(0.3)
+                    time.sleep(0.2)
                     st.rerun()
                 st.error(f"❌ 失败! 得分:{result['score']} 落水了💧")
             st.json(result)
