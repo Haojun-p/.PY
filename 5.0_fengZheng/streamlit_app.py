@@ -2,7 +2,12 @@ import streamlit as st
 import time
 import importlib.util
 import os
-from streamlit_keyup import streamlit_keyup
+
+try:
+    from streamlit_keyup import streamlit_keyup
+    HAS_KEYUP = True
+except ImportError:
+    HAS_KEYUP = False
 
 game_path = os.path.join(os.path.dirname(__file__), "game.py")
 spec = importlib.util.spec_from_file_location("game", game_path)
@@ -222,25 +227,29 @@ def game_screen():
             with col_info3:
                 st.metric("升力", f"{stats['lift']:.1f}")
             
-            st.markdown("**控制风筝 (键盘 AWSD 或点击按钮)**")
+            if HAS_KEYUP:
+                st.markdown("**控制风筝 (键盘 AWSD 或点击按钮)**")
+            else:
+                st.markdown("**控制风筝 (点击按钮)**")
             
-            key_pressed = streamlit_keyup(key="game_control", debounce=50)
             moved = False
             
-            if key_pressed:
-                key = key_pressed.lower()
-            if key == 'a':
-                st.session_state.kite_pos[0] = max(0, st.session_state.kite_pos[0] - st.session_state.move_speed)
-                moved = True
-            elif key == 'w':
-                st.session_state.kite_pos[1] = max(0, st.session_state.kite_pos[1] - st.session_state.move_speed)
-                moved = True
-            elif key == 's':
-                st.session_state.kite_pos[1] = min(450, st.session_state.kite_pos[1] + st.session_state.move_speed)
-                moved = True
-            elif key == 'd':
-                st.session_state.kite_pos[0] = min(900, st.session_state.kite_pos[0] + st.session_state.move_speed)
-                moved = True
+            if HAS_KEYUP:
+                key_pressed = streamlit_keyup(key="game_control", debounce=50)
+                if key_pressed:
+                    key = key_pressed.lower()
+                    if key == 'a':
+                        st.session_state.kite_pos[0] = max(0, st.session_state.kite_pos[0] - st.session_state.move_speed)
+                        moved = True
+                    elif key == 'w':
+                        st.session_state.kite_pos[1] = max(0, st.session_state.kite_pos[1] - st.session_state.move_speed)
+                        moved = True
+                    elif key == 's':
+                        st.session_state.kite_pos[1] = min(450, st.session_state.kite_pos[1] + st.session_state.move_speed)
+                        moved = True
+                    elif key == 'd':
+                        st.session_state.kite_pos[0] = min(900, st.session_state.kite_pos[0] + st.session_state.move_speed)
+                        moved = True
             
             col1, col2, col3, col4, col5 = st.columns([1, 1, 1, 1, 2])
             if col1.button("⬅ A", use_container_width=True):
